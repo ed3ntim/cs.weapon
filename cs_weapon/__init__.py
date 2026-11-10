@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 ed3n
+"""cs.weapon - spawn CS2 weapons and knives with skins, exact patterns and wear.
+
+Works both as a Blender 4.5+ extension (blender_manifest.toml) and as a
+legacy add-on (bl_info). Sub-packages:
+
+    library/  weapon database, seed RNG, pattern transform, wear
+    nodes/    materials and node groups
+    ops/      operators: spawning and editing
+    ui/       sidebar panels and the skin list
+    api.py    public API for partner add-ons (cs.anim, cs.agents)
+
+Host mode (cs.blend): a host add-on registers the package as a sub-module
+with ``register(host)``. It then registers SETTINGS (after register), keeps
+one instance per module and provides ``host.settings(MODULE_ID)`` and
+``host.user_path(MODULE_ID, sub, create)``; it draws the settings with
+``draw_prefs(layout, settings)``. Standalone (host None) nothing changes.
+"""
+
+bl_info = {
+    "name": "cs.weapon",
+    "author": "ed3n",
+    "version": (1, 0, 0),
+    "blender": (4, 5, 0),
+    "location": "3D Viewport > Sidebar > cs.weapon",
+    "description": "Spawn CS2 weapons and knives with skins, exact patterns and wear",
+    "category": "Object",
+    "support": "COMMUNITY",
+}
+
+# Support "Reload Scripts": re-import submodules if already loaded.
+if "bpy" in locals():
+    import importlib
+
+    for _mod in (utils, preferences, properties, library, nodes, ops, ui, api):  # noqa: F821
+        importlib.reload(_mod)
+
+import bpy  # noqa: E402
+
+from . import utils, preferences, properties, library, nodes, ops, ui, api  # noqa: E402
+
+# Registration order matters: property groups before anything that points to them.
+_modules = (properties, library, ops, ui)
+
+MODULE_ID = utils.MODULE_ID
+SETTINGS = preferences.CSWEAPON_PG_settings
+draw_prefs = preferences.draw_prefs
+
+
+def register(host=None):
+    utils.set_host(host)
+    preferences.register(host)
+    for mod in _modules:
+        mod.register()
+
+
+def unregister():
+    for mod in reversed(_modules):
+        mod.unregister()
+    preferences.unregister()
+    utils.set_host(None)

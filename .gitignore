@@ -1,0 +1,58 @@
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Build output (release zip is built locally / attached to releases)
+dist/
+build/
+*.zip
+
+# Blender
+*.blend1
+*.blend@
+blender_manifest.toml.bak
+
+# User weapon exports (never commit Valve game assets)
+user_weapons/
+exports/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Publish worktree (tools/publish.py)
+.publish/
+
+# Personal full builds: Valve assets, never commit
+cs_weapon/weapons/bundled/
+
+# promo video renders (social media only, never committed)
+promo/out/
+
+# Source2Viewer download / raw exports
+_tools/
+_raw/
+
+
+# Local CS2 exports and reference renders (Valve assets)
+reference/
+*.vpk
+exceptions.txt
+
+# Game shaders extracted from CS2 (Valve code)
+*.glsl
+*.vcs
+*.spv

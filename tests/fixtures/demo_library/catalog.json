@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "weapons": [
+    {
+      "id": "demo_rifle",
+      "def_index": 0,
+      "name": "Demo Rifle",
+      "type": "rifle",
+      "model": "models/demo_rifle.glb",
+      "hd": {
+        "mesh": "body",
+        "uv_scale": 1.0,
+        "weapon_length": 36.0,
+        "textures": {
+          "color": "textures/demo_rifle_color.png",
+          "masks": "textures/demo_rifle_masks.png"
+        },
+        "target": {
+          "g_vSticker0Offset": [
+            0.0,
+            0.0
+          ],
+          "g_vSticker0Scale": [
+            2.0,
+            2.0
+          ],
+          "g_vSticker1Offset": [
+            0.2,
+            0.1
+          ],
+          "g_vSticker1Scale": [
+            4.0,
+            4.0
+          ]
+        }
+      }
+    }
+  ],
+  "paint_kits": [
+    {
+      "id": 90001,
+      "name": "demo_patina",
+      "display": "Demo Patina",
+      "style": 8,
+      "params": {
+        "g_flColorBrightness": 1.6,
+        "g_flPaintRoughness": 0.4
+      },
+      "textures": {
+        "pattern": "textures/demo_patina.png"
+      },
+      "ranges": {
+        "g_flPatternTexCoordRotation": [
+          0,
+          360
+        ],
+        "g_vPatternTexCoordOffset": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": 90002,
+      "name": "demo_fade",
+      "display": "Demo Fade",
+      "style": 6,
+      "wear_max": 0.08,
+      "params": {
+        "g_flColorBrightness": 2.0,
+        "g_flPaintRoughness": 0.35
+      },
+      "textures": {
+        "pattern": "textures/demo_fade.png"
+      },
+      "ranges": {
+        "g_flPatternTexCoordRotation": [
+          -55,
+          -65
+        ]
+      }
+    }
+  ],
+  "skins": [
+    {
+      "weapon": "demo_rifle",
+      "paint_kit": 90001
+    },
+    {
+      "weapon": "demo_rifle",
+      "paint_kit": 90002
+    }
+  ]
+}
