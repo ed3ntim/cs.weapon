@@ -133,6 +133,31 @@ def _image(path, data=False):
     return img
 
 
+MASK_FLOOR_KEY = "cs_weapon_mask_floor"
+
+
+def image_mask_floor(img):
+    """ST.mask_floor of a loaded wear mask, cached on the image."""
+    if img is None or not img.size[0] or not img.size[1]:
+        return 0.0
+    if MASK_FLOOR_KEY in img:
+        return float(img[MASK_FLOOR_KEY])
+    import numpy as np
+    w, h = img.size
+    px = np.empty(w * h * img.channels, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    floor = ST.mask_floor(px.reshape(h, w, img.channels)[..., 0])
+    img[MASK_FLOOR_KEY] = floor
+    return floor
+
+
+def _set_shape(shape, mask_img):
+    """Shape node: clamp(mask * gain - floor * gain)."""
+    floor = image_mask_floor(mask_img)
+    shape.inputs[1].default_value = ST.MASK_SHAPE_GAIN
+    shape.inputs[2].default_value = -floor * ST.MASK_SHAPE_GAIN
+
+
 def clear(mat):
     """Remove all sticker nodes and reconnect the weapon shader."""
     tree = mat.node_tree if mat is not None else None
@@ -199,6 +224,10 @@ def _update(mat, entries):
             img = _image(path, data=role in ST.DATA_ROLES)
             if n is not None and img is not None and n.image != img:
                 n.image = img
+            if role == ST.ROLE_WEARMASK and img is not None:
+                shape = nodes.get(node_name(slot, "SHAPE"))
+                if shape is not None:
+                    _set_shape(shape, img)
         set_values(mat, slot, entry["offset"], entry["scale"], entry.get("rotation", 0.0), entry.get("wear", 0.0))
         group, wear_node = nodes.get(node_name(slot, "STICKER")), nodes.get(node_name(slot, "WEAR"))
         if group is not None:
@@ -364,9 +393,10 @@ def _slot(tree, entry, uv, shader, origin, vec=None):
 
     wearmask = tex(ST.ROLE_WEARMASK)
     if wearmask is not None:
-        # CS2: the sticker shape is wear mask > ~0.8 % (as in cs.sticker).
-        shape = node("ShaderNodeMath", "SHAPE", -700, -700, operation="MULTIPLY", use_clamp=True)
-        shape.inputs[1].default_value = 128.0
+        # CS2: the sticker shape is wear mask above its background (0, some
+        # masks 4/255) by ~0.4 % (as in cs.sticker).
+        shape = node("ShaderNodeMath", "SHAPE", -700, -700, operation="MULTIPLY_ADD", use_clamp=True)
+        _set_shape(shape, wearmask.image)
         links.new(wearmask.outputs["Color"], shape.inputs[0])
         wire(shape.outputs[0], "Alpha", wear_node)
         wire(wearmask.outputs["Color"], "Wear Mask", wear_node)

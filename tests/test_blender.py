@@ -310,6 +310,59 @@ class BlenderTests(unittest.TestCase):
             self.assertTrue(out.inputs["Surface"].is_linked)
             reg.invalidate()
 
+    def test_sticker_mask_background_and_gold_tint(self):
+        """cs.sticker #14: masks with 4/255 outside are still cut out.
+        cs.sticker #15: the catalog's Gold Tint (a list) reaches the group."""
+        import json
+        import os
+        import tempfile
+        from cs_weapon.library import sticker_registry, sticker_thumbs
+        from cs_weapon.library import stickers as ST
+        from cs_weapon.nodes import sticker_layer
+        from cs_weapon.ops import sticker_ops
+        bg = 4.0 / 255.0
+        with tempfile.TemporaryDirectory() as d:
+            for name, fill in (("red", lambda x, y: (1.0, 0.0, 0.0, 1.0)),
+                               ("mask", lambda x, y: (0.8,) * 3 + (1.0,) if 4 <= x < 12 and 4 <= y < 12
+                                else (bg,) * 3 + (1.0,))):
+                img = bpy.data.images.new("stk", 16, 16, alpha=True)
+                img.pixels = [v for i in range(256) for v in fill(i % 16, i // 16)]
+                img.filepath_raw = os.path.join(d, f"{name}.png")
+                img.file_format = "PNG"
+                img.save()
+                bpy.data.images.remove(img)
+            with open(os.path.join(d, "catalog.json"), "w", encoding="utf-8") as fh:
+                json.dump({"stickers": [
+                    {"id": "cs2_80_gold", "name": "Gold", "finish": "GOLD",
+                     "textures": {"base": "red.png", "wearmask": "mask.png"},
+                     "params": {"Gold Tint": [1.0, 0.9036, 0.49, 1.0], "Tint Amount": 1.0,
+                                "Tint Saturation": 0.04, "Note": "text"}},
+                ]}, fh)
+            sticker_registry._library.load(d)
+            sticker_registry._loaded = True
+            sticker = sticker_registry.get_sticker("cs2_80_gold")
+            self.assertEqual(sticker.params["Gold Tint"], [1.0, 0.9036, 0.49, 1.0])
+            self.assertNotIn("Note", sticker.params)
+
+            obj = self._spawn("demo_rifle:90001")
+            sticker_ops.put(obj, 0, sticker)
+            sticker_ops.sync(obj)
+            nodes = obj.material_slots[0].material.node_tree.nodes
+            shape = nodes[sticker_layer.node_name(0, "SHAPE")]
+            self.assertAlmostEqual(shape.inputs[2].default_value, -bg * ST.MASK_SHAPE_GAIN, places=2)
+            group = nodes[sticker_layer.node_name(0, "STICKER")]
+            self.assertAlmostEqual(group.inputs["Gold Tint"].default_value[1], 0.9036, places=4)
+            self.assertAlmostEqual(group.inputs["Tint Saturation"].default_value, 0.04, places=4)
+
+            px = sticker_thumbs.compose(sticker, 16)
+            self.assertLess(px[1, 1, 3], 0.01)
+            self.assertGreater(px[8, 8, 3], 0.99)
+            r, g, b = px[8, 8, :3]   # red base, gold tint: gold thumbnail
+            self.assertGreater(g / r, 0.6)
+            self.assertGreater(g, b)
+            sticker_ops.remove(obj, 0)
+            sticker_registry.invalidate()
+
     def test_same_structure_updates_in_place(self):
         import tempfile
         from cs_weapon.nodes import sticker_layer

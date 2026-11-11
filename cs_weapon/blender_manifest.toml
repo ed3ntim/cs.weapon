@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "cs_weapon"
-version = "1.0.0"
+version = "1.0.1"
 name = "cs.weapon"
 tagline = "Spawn CS2 weapons and knives with skins, patterns and wear"
 maintainer = "ed3n <contact@ed3n.gallery>"
