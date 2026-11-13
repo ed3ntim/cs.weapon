@@ -113,6 +113,10 @@ python tools/export_cs2_weapons.py --out D:/cs2_weapons --download-s2v
   of the models to an existing library, `--skip-export --rig` the
   skeletons and animations (both need CS2 and Source2Viewer).
 - Run it again after a CS2 update.
+- Libraries exported before cs.weapon 1.0.2 have broken glove normals
+  (dark cracks on the gloves at every wear). Fix one in place, without a
+  full export: `python tools/fix_glove_normals.py --library <folder with
+  catalog.json> --download-s2v` (needs `pip install pillow`).
 
 Optionally bake the library into a personal add-on zip:
 

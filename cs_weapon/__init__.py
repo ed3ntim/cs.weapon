@@ -21,7 +21,7 @@ one instance per module and provides ``host.settings(MODULE_ID)`` and
 bl_info = {
     "name": "cs.weapon",
     "author": "ed3n",
-    "version": (1, 0, 1),
+    "version": (1, 0, 2),
     "blender": (4, 5, 0),
     "location": "3D Viewport > Sidebar > cs.weapon",
     "description": "Spawn CS2 weapons and knives with skins, exact patterns and wear",

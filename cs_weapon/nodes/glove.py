@@ -32,7 +32,7 @@ import math
 import os
 
 from ..library import pattern, procedure, seed
-from . import glsl
+from . import glsl, udim
 from .expr import Graph
 from .paint import WEAR, PaintError, _image, _linear_to_srgb, _num, shader_index
 
@@ -434,6 +434,33 @@ def vertex_outputs(g, index, params, path, texcoord, k, ps_meta):
     return out
 
 
+RAW_NORMALS_FOLDER = "paints_raw"  # tools/export_cs2_weapons.py RAW_NORMALS_GROUP
+
+
+def is_raw_normal(path):
+    """True for normal textures exported without Source2Viewer's decoding
+    (#39): the shader reads them as they are. Older libraries hold decoded
+    RGB normals, which g_tNormal & co. encode back to hemi-octahedral."""
+    parts = os.path.normpath(path).replace("\\", "/").split("/")
+    return RAW_NORMALS_FOLDER in parts[:-1]
+
+
+def _textures(progs, sources):
+    """{(path, srgb)} of the image files the passes' samplers point at."""
+    out = set()
+    for (params, _path), src in zip(progs, sources):
+        for name, srgb in glsl.header(src)["textures"].items():
+            path = params.get(name)
+            if isinstance(path, str) and path and os.path.isfile(path):
+                out.add((path, srgb))
+    return out
+
+
+def _image_size(path, srgb):
+    img = _image(path, srgb)
+    return tuple(img.size) if img is not None else (0, 0)
+
+
 def build_nodes(mat, skin, attributes, progs=None):
     """Fill a glove material. Returns the spec."""
     progs = progs or programs(skin, attributes)
@@ -451,9 +478,13 @@ def build_nodes(mat, skin, attributes, progs=None):
     cache = {}
     results = []
     folder = os.path.dirname(skin.paint_kit.shaders)
-    for k, (params, path) in enumerate(progs):
+    sources = []
+    for params, path in progs:
         with open(path, encoding="utf-8") as fh:
-            src = fh.read()
+            sources.append(fh.read())
+    tiles = udim.plan(_textures(progs, sources), _image_size)
+    for k, (params, path) in enumerate(progs):
+        src = sources[k]
         meta = glsl.header(src)
         consts, main = glsl.parse_main(src)
 
@@ -463,12 +494,14 @@ def build_nodes(mat, skin, attributes, progs=None):
             key = (name, tex_path, uvvec.key)
             if key in cache:
                 return cache[key]
-            img = _image(tex_path, meta["textures"].get(name, False))
+            srgb = meta["textures"].get(name, False)
+            tile = tiles.get((tex_path, srgb))
+            img = _image(tex_path, srgb) if tile is None else udim.image(tile[0])
             if img is None:
                 res = (g.wrap((0.0, 0.0, 0.0)), g.wrap(0.0), (0.0, 0.0))
             else:
-                rgb, alpha = g.texture(img, uvvec)
-                if name.startswith(NORMAL_TEXTURES):
+                rgb, alpha = g.texture(img, uvvec if tile is None else udim.tile_uv(g, uvvec, tile[1]))
+                if name.startswith(NORMAL_TEXTURES) and not is_raw_normal(tex_path):
                     a, b = _hemi_oct(g, rgb)
                     rgb = g.vec(a, b, 0.0)
                 res = (rgb, alpha, (0.0, 1.0))

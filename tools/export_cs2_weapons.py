@@ -65,6 +65,18 @@ S2V_NAMES = ("Source2Viewer-CLI.exe", "Source2Viewer-CLI")
 ITEMS_GAME = "scripts/items/items_game.txt"
 ICON_DIR_VPK = "panorama/images/econ/default_generated/"
 RAW_DIR = "_raw"
+# Glove normal textures exported without Source2Viewer's decoding (#39):
+# its "auto" decode reads the AG normals of the glove paints (shader reads
+# .wy) as hemi-octahedral RG, writes the decoded normal to RGB and drops
+# alpha (normal X). Raw copies go to their own library folder.
+RAW_NODECODE_DIR = "_raw_nodecode"
+RAW_NORMALS_GROUP = "paints_raw"
+
+
+def is_normal_key(key):
+    """Sampler / vmat parameter of a normal texture (g_tNormal,
+    g_tSurfaceNormal2, TextureNormal ...)."""
+    return "normal" in key.lower()
 RIG_RAW = "_rig"  # inside RAW_DIR: models with skeleton and animations
 RIG_SUFFIX = ".rig.glb"
 
@@ -905,6 +917,26 @@ class Exporter:
                 tex.update(t + "_c" for t in compmat.textures(proc))
         tex |= {p for pair in gcombos for p in gicons.get(pair, {}).values()}
         self.s2v(tex, extensions="vtex_c")
+        normals = {t for t in tex if "normal" in os.path.basename(t).lower()}
+        if normals:
+            print(f"gloves: {len(normals)} normal textures without decoding")
+            run_s2v(self.exe, self.vpk, self.raw_nodecode(), normals, extensions="vtex_c",
+                    threads=self.args.threads, extra=("--texture_decode_flags", "none"))
+
+    def raw_nodecode(self):
+        path = os.path.join(self.out, RAW_NODECODE_DIR)
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def glove_texture(self, place, vtex, key, group):
+        """Library path of a glove texture: normals from the undecoded
+        export (group RAW_NORMALS_GROUP), the rest as usual. "" if missing."""
+        if is_normal_key(key):
+            src = texture_file(self.raw_nodecode(), vtex)
+            if src:
+                return place(src, RAW_NORMALS_GROUP)
+        src = texture_file(self.raw, vtex)
+        return place(src, group) if src else ""
 
     def build_gloves(self, place, library_ops):
         """Catalog entries of the gloves: (weapons, paint kits, skins)."""
@@ -967,8 +999,8 @@ class Exporter:
                     "wear_min": float(raw_kit.get("wear_remap_min", 0.06)),
                     "wear_max": float(raw_kit.get("wear_remap_max", 0.8)),
                     "rarity": items.rarity.get(kname, ""),
-                    "passes": {t: library_ops(ops, kname) for t, ops in proc["passes"].items()},
-                    "final": library_ops(proc["final"], kname),
+                    "passes": {t: library_ops(ops, kname, glove=True) for t, ops in proc["passes"].items()},
+                    "final": library_ops(proc["final"], kname, glove=True),
                     "roll": proc["roll"], "rolls": proc["rolls"],
                     "vcompmat": gkits[kname],
                 }
@@ -1224,8 +1256,9 @@ class Exporter:
                     self.warnings.append(f"{vmat_path}: texture not exported ({vtex})")
             return tex, spec, full
 
-        def library_ops(ops, where):
-            """Ops with VPK texture paths replaced by library paths."""
+        def library_ops(ops, where, glove=False):
+            """Ops with VPK texture paths replaced by library paths (glove
+            normals undecoded, see glove_texture)."""
             out = []
             for op in ops:
                 if "set" in op:
@@ -1234,11 +1267,15 @@ class Exporter:
                         if v is None:
                             continue
                         if k.startswith("g_t") and isinstance(v, str):
-                            src = texture_file(raw, v)
-                            if not src:
+                            if glove:
+                                path = self.glove_texture(place, v, k, "paints")
+                            else:
+                                src = texture_file(raw, v)
+                                path = place(src, "paints") if src else ""
+                            if not path:
                                 self.warnings.append(f"{where}: texture not exported ({v})")
                                 continue
-                            v = place(src, "paints")
+                            v = path
                         values[k] = v
                     op = {**op, "set": values}
                 out.append(op)
