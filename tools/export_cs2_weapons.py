@@ -1346,6 +1346,10 @@ class Exporter:
             if not os.path.isfile(glb):
                 self.warnings.append(f"module {key}: model not exported ({model})")
                 continue
+            for uri in glb_images(glb):    # e.g. default_ao / default_normal, only in the glb
+                src = os.path.join(os.path.dirname(glb), uri)
+                if os.path.isfile(src):
+                    place(src, "modules")
             entry = {"model": place(glb, "modules"), "materials": {}}
             for vmat in vmats:
                 tex, spec, full = textures_of(vmat, "modules", skip=())

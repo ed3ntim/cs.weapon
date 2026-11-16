@@ -26,13 +26,17 @@ Stable within an ``API_VERSION``. What it offers:
   location=...)``; ``register_spawn_handler(fn)``: ``fn(weapon)`` runs after
   every spawn (operator, inspect link or API).
 * Rig (weapons and gloves spawned with ``rigged=True``): ``armature``, ``bones``,
-  ``has_rig``, ``clips`` ({clip name: action}), ``set_clip``, ``rest_pose``.
+  ``has_rig``, ``clips`` ({clip name: action}), ``set_clip``, ``rest_pose``,
+  ``rig_file`` (the rig glb) and ``RIG_BONE_HEURISTIC`` (the glTF bone
+  heuristic it was imported with).
 * Attachments: ``attachments`` (names), ``attachment_matrix`` (world
   matrix, follows the pose of a rigged weapon), e.g. ``muzzle_flash``,
   ``shell_eject``, ``stattrak``, ``nametag``, ``keychain_markup``.
 
 Matrices are in Blender units (metres); attachment axes are the game's
-(x forward out of the attachment, z up), converted to Blender space.
+(x forward out of the attachment, z up), converted to Blender space (a
+muzzle_flash of a weapon pointing along -Y has x = -Y; before 1.0.3 the
+axes stayed in Source orientation).
 Functions return None or empty results for objects that are not weapons
 instead of raising.
 """
@@ -42,6 +46,7 @@ import bpy
 from . import utils
 
 API_VERSION = 1
+RIG_BONE_HEURISTIC = "BLENDER"   # same as ops.spawn.RIG_BONE_HEURISTIC
 
 _spawn_handlers = []
 
@@ -233,6 +238,14 @@ def set_clip(obj, clip):
     return action
 
 
+def rig_file(obj):
+    """Path of the rig glb of a weapon or glove (any of its parts), or ""."""
+    skin = _skin(obj)
+    if skin is None or not skin.weapon.has_rig():
+        return ""
+    return skin.weapon.rig_path()
+
+
 def rest_pose(obj):
     """Clear the clip and all pose transforms of a rigged weapon."""
     arm = armature(obj)
@@ -269,6 +282,9 @@ def attachment_matrix(obj, name):
     local = modules.attachment_local(skin.weapon, name, spawn.uses_legacy(skin))
     if local is None:
         return None
+    # attachment_local turns the frame as a whole (right for module meshes);
+    # here the axes themselves go to Blender space: x out of the attachment
+    local = local @ modules.SOURCE_TO_BLENDER
     model = spawn.template_matrix(weapon.data).inverted_safe() @ local  # in the weapon object's space
     arm = armature(weapon)
     att = skin.weapon.attachments.get(name) or {}

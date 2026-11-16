@@ -138,3 +138,20 @@ def sticker_library_dirs():
             seen.add(key)
             out.append(d)
     return out
+
+
+GLTF_LEFTOVER = "glTF_not_exported"   # collection the glTF importer makes for bone shapes
+
+
+def remove_import_leftovers(collections_before):
+    """Remove the helper collections a glTF import left behind (bone shape
+    icosphere in ``glTF_not_exported``) with their objects and meshes."""
+    for coll in [c for c in bpy.data.collections if c not in collections_before
+                 and c.name.startswith(GLTF_LEFTOVER)]:
+        for obj in list(coll.objects):
+            data = obj.data
+            if len(obj.users_collection) <= 1:
+                bpy.data.objects.remove(obj, do_unlink=True)
+                if isinstance(data, bpy.types.Mesh) and data.users == 0:
+                    bpy.data.meshes.remove(data)
+        bpy.data.collections.remove(coll)

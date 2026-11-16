@@ -34,6 +34,7 @@ PROP_RIG = "cs_weapon_rig"        # on rig armature objects and actions: templat
 PROP_CLIP = "cs_weapon_clip"      # on rig actions: clip name in the model (reload, shoot ...)
 RIG_CONSTRAINT = "cs.weapon Rig"  # Armature constraint of rigid parts on a rigged weapon
 RIG_BONE = "weapon_offset"        # bone of all attachments
+RIG_BONE_HEURISTIC = "BLENDER"    # glTF bone heuristic of every import (rigs: cs.anim reads it)
 
 
 def _template_key(model_path, mesh_name):
@@ -57,7 +58,9 @@ def _import_templates(model_path):
     user. Returns {object name: mesh}."""
     before = set(bpy.data.objects)
     actions_before = set(bpy.data.actions)
-    bpy.ops.import_scene.gltf(filepath=model_path)
+    colls_before = set(bpy.data.collections)
+    bpy.ops.import_scene.gltf(filepath=model_path, bone_heuristic=RIG_BONE_HEURISTIC)
+    utils.remove_import_leftovers(colls_before)
     new = [o for o in bpy.data.objects if o not in before]
     found = {}
     rig_key_ = _template_key(model_path, "")

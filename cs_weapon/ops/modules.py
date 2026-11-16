@@ -195,7 +195,9 @@ def module_mesh(module):
         if me.get(PROP_MODULE_MODEL) == key:
             return me
     before_obj, before_mat = set(bpy.data.objects), set(bpy.data.materials)
+    colls_before = set(bpy.data.collections)
     bpy.ops.import_scene.gltf(filepath=module.model)
+    utils.remove_import_leftovers(colls_before)
     new = [o for o in bpy.data.objects if o not in before_obj]
     mesh = None
     for obj in new:
