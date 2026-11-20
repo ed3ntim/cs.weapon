@@ -236,4 +236,36 @@ class CSWEAPON_PT_stickers(_Panel, bpy.types.Panel):
             box.label(text=f"Picked: {picked.full_name}")
 
 
-classes = (CSWEAPON_PT_library, CSWEAPON_PT_active, CSWEAPON_PT_stickers)
+class CSWEAPON_PT_special_shader(_Panel, bpy.types.Panel):
+    bl_label = "Special Shader"
+    bl_idname = "CSWEAPON_PT_special_shader"
+    bl_parent_id = "CSWEAPON_PT_active"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    @classmethod
+    def poll(cls, context):
+        return utils.active_weapon(context) is not None
+
+    def draw(self, context):
+        from ..nodes import special_shader
+        layout = self.layout
+        props = utils.active_weapon(context).cs_weapon
+        layout.prop(props, "special_shader", text="")
+        if props.special_shader != special_shader.NONE and not special_shader.available(props.special_shader):
+            layout.label(text=f"Library has no {props.special_shader.lower()} texture:", icon="INFO")
+            layout.label(text="export_cs2_weapons.py --special-shaders-only")
+            return
+        if props.special_shader == special_shader.FROST:
+            col = layout.column(align=True)
+            col.prop(props, "frost_amount", slider=True)
+            col.prop(props, "frost_melt", slider=True)
+        if props.special_shader == special_shader.RAIN:
+            col = layout.column(align=True)
+            col.prop(props, "rain_wetness", slider=True)
+            col.prop(props, "rain_speed")
+            row = col.row(align=True)
+            row.prop(props, "rain_time", text="Time" if not props.rain_animate else "Offset")
+            row.prop(props, "rain_animate", text="", icon="PLAY")
+
+
+classes = (CSWEAPON_PT_library, CSWEAPON_PT_active, CSWEAPON_PT_stickers, CSWEAPON_PT_special_shader)

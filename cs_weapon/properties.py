@@ -153,6 +153,18 @@ def _on_weapon_change(self, context):
     material.update_object(self.id_data)
 
 
+def _on_special_shader(self, context):
+    from .nodes import special_shader
+    special_shader.sync(self.id_data)
+
+
+SPECIAL_SHADER_ITEMS = [
+    ("NONE", "None", "No special shader"),
+    ("RAIN", "Rain", "Water drops and wetness from the weapon shader"),
+    ("FROST", "Frost", "Frost and ice crystals from the weapon shader"),
+]
+
+
 def _on_module_change(self, context):
     from .ops import modules
     modules.sync(self.id_data)
@@ -217,6 +229,27 @@ class CSWEAPON_PG_object(bpy.types.PropertyGroup):
                ("MESH", "As Meshes", "Own sticker meshes on the slots (child objects), e.g. for export "
                                     "or to edit them separately")],
         description="How the stickers are put on the weapon")
+    special_shader: EnumProperty(
+        name="Special Shader", items=SPECIAL_SHADER_ITEMS, default="NONE", update=_on_special_shader,
+        description="Extra shader the game can put on weapons, knives and gloves")
+    rain_wetness: FloatProperty(
+        name="Wetness", default=1.0, min=0.0, soft_max=1.0, max=4.0, update=_on_special_shader,
+        description="How wet the item is (the game's rain exposure; above 1 more drops at once)")
+    rain_time: FloatProperty(
+        name="Time", default=0.0, unit="TIME_ABSOLUTE", update=_on_special_shader,
+        description="Rain timer in seconds: drops come and go over time")
+    rain_speed: FloatProperty(
+        name="Speed", default=1.0, min=0.0, soft_max=3.0, update=_on_special_shader,
+        description="How fast the drops come and go")
+    rain_animate: BoolProperty(
+        name="Animate", default=False, update=_on_special_shader,
+        description="Drive the rain timer from the frame (Time is added as offset)")
+    frost_amount: FloatProperty(
+        name="Frost", default=1.0, min=0.0, max=1.0, update=_on_special_shader,
+        description="How far the frost has grown (rough parts like cloth freeze first, metal last)")
+    frost_melt: FloatProperty(
+        name="Melt", default=0.0, min=0.0, max=1.0, update=_on_special_shader,
+        description="Melt water on the frost: wet, glossy crystals (only as much as there is frost)")
 
 
 _classes = (CSWEAPON_PG_item, CSWEAPON_PG_sticker_item, CSWEAPON_PG_state, CSWEAPON_PG_sticker,

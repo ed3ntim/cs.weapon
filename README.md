@@ -6,7 +6,7 @@ skin's wear range), rendered by the game's own paint shaders, live in
 EEVEE and Cycles. StatTrak, name tags, stickers and charms sit where the
 game puts them, CS2 inspect links spawn the exact item, and weapons can
 come with their skeleton and animations.
-Target: Blender 5.2, compatible back to 4.5.
+Target: Blender 5.3, compatible back to 4.5.
 
 **For the add-on excluding the weapon assets (CS2 export required) [⬇ Download cs_weapon.zip (latest release)](https://github.com/ed3ntim/cs.weapon/releases/latest/download/cs_weapon.zip)**
 
@@ -65,6 +65,12 @@ form `S...A...D...` hold no item data and cannot be read.
 - **Add Charm** hangs the charm picked in
   [cs.charm](https://github.com/ed3ntim/cs.charm) at the weapon's charm
   point.
+- **Special Shader** (optional): effects the game's weapon shader puts on
+  weapons, knives and gloves on some maps. *Rain*: drops and
+  wetness; wetness, speed and time are live, *Animate* runs the drops with
+  the timeline. *Frost*: frost and ice crystals; *Frost* sets
+  how far it has grown (cloth and rubber freeze first, metal last), *Melt*
+  adds wet, glossy crystals. Needs the textures in the library (see below).
 - **Bake Skin** bakes color, roughness, metalness and normal (stickers
   included) into textures on a plain Principled material, for export to
   other programs. **Restore Live Material** switches back.
@@ -112,6 +118,8 @@ python tools/export_cs2_weapons.py --out D:/cs2_weapons --download-s2v
 - `--skip-export --sticker-markup` adds the sticker slots and charm points
   of the models to an existing library, `--skip-export --rig` the
   skeletons and animations (both need CS2 and Source2Viewer).
+- `--special-shaders-only` adds the special shader textures (rain drops, frost) to an existing
+  library, nothing else is exported.
 - Run it again after a CS2 update.
 - Libraries exported before cs.weapon 1.0.2 have broken glove normals
   (dark cracks on the gloves at every wear). Fix one in place, without a

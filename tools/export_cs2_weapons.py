@@ -92,6 +92,11 @@ MODULES = {
                 [f"{MODULE_DIR}/nametag/materials/nametag_default.vmat"]),
 }
 NAMETAG_VCOMPMAT = f"{MODULE_DIR}/nametag/nametag_default.vcompmat"
+# Special shaders of the weapon shader (cs_weapon/nodes/special_shader.py): effect ->
+# {role: texture}. Rain (de_train): droplet normal xy, phase, mask.
+SPECIAL_SHADERS = {"rain": {"droplets": "materials/dev/water_droplets.vtex_c"},
+                   "frost": {"frost": "materials/dev/frost.vtex_c"}}
+SPECIAL_SHADERS_DIR = "special_shaders"
 BATCH = 80  # file filters per Source2Viewer call (Windows command line limit)
 WEAR_ICONS = ("light", "medium", "heavy")
 # Paint materials also reference default composite inputs of some weapon:
@@ -1147,6 +1152,7 @@ class Exporter:
             self.s2v(icon_files, extensions="vtex_c")
             self.export_modules()
             self.export_gloves(gloves, gkits, gcombos, gicons)
+            self.export_special_shaders()
 
         elif args.sticker_markup or args.rig:
             game = self.game = find_cs2(args.cs2)
@@ -1407,6 +1413,7 @@ class Exporter:
         cat_kits += g_kits
         cat_skins += g_skins
 
+        special_shaders = self.special_shader_entries(place)
         catalog = {
             "version": C.CATALOG_VERSION,
             "generator": "cs.weapon tools/export_cs2_weapons.py",
@@ -1417,10 +1424,55 @@ class Exporter:
             "shaders": shaders,
             "glove_shaders": glove_shaders,
             "modules": modules,
+            "special_shaders": special_shaders,
         }
         with open(os.path.join(out, C.CATALOG_FILE), "w", encoding="utf-8", newline="\n") as fh:
             json.dump(catalog, fh, indent=1, ensure_ascii=False)
         self.report(catalog)
+
+    def export_special_shaders(self):
+        self.s2v({tex for files in SPECIAL_SHADERS.values() for tex in files.values()}, extensions="vtex_c")
+
+    def special_shader_entries(self, place):
+        """{effect: {role: library path}} of the exported special shader textures."""
+        out = {}
+        for effect, files in SPECIAL_SHADERS.items():
+            for role, vtex in files.items():
+                src = texture_file(self.raw, vtex)
+                if src:
+                    out.setdefault(effect, {})[role] = place(src, SPECIAL_SHADERS_DIR)
+                else:
+                    self.warnings.append(f"special shader {effect}: {vtex} not exported")
+        return out
+
+    def run_special_shaders_only(self):
+        """Add the special shader textures to an existing library (catalog.json
+        updated in place, nothing else exported)."""
+        cat_path = os.path.join(self.out, C.CATALOG_FILE)
+        if not os.path.isfile(cat_path):
+            raise SystemExit(f"no library in {self.out} ({C.CATALOG_FILE} missing)")
+        game = self.game = find_cs2(self.args.cs2)
+        self.vpk = os.path.join(game, "pak01_dir.vpk")
+        self.exe = find_s2v(self.args.s2v, os.path.join(self.out, "_tools"), self.args.download_s2v)
+        had_raw = bool(os.listdir(self.raw))  # __init__ creates it empty
+        self.export_special_shaders()
+
+        def place(src, group):
+            dst = os.path.join(self.out, group, os.path.basename(src))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+            return os.path.relpath(dst, self.out).replace(os.sep, "/")
+
+        with open(cat_path, encoding="utf-8") as fh:
+            catalog = json.load(fh)
+        catalog["special_shaders"] = self.special_shader_entries(place)
+        with open(cat_path, "w", encoding="utf-8", newline="\n") as fh:
+            json.dump(catalog, fh, indent=1, ensure_ascii=False)
+        if not had_raw:  # the raw export was only needed for these textures
+            shutil.rmtree(self.raw, ignore_errors=True)
+        for w in self.warnings:
+            print("  warning: " + w)
+        print(f"special shaders: {', '.join(sorted(catalog['special_shaders'])) or 'none'} -> {cat_path}")
 
     def export_shaders(self, cat_weapons, cat_kits, cat_skins):
         """Write the paint shader combos the skins need into <out>/shaders.
@@ -1488,7 +1540,13 @@ def main():
                     help="downscale weapon and paint textures to at most PX per side, e.g. 2048 "
                          "(default 0: full quality; needs pillow). Combine with --skip-export "
                          "to shrink an existing library without exporting again.")
-    Exporter(ap.parse_args()).run()
+    ap.add_argument("--special-shaders-only", action="store_true",
+                    help="only add the special shader textures (rain drops) to an existing library")
+    args = ap.parse_args()
+    if args.special_shaders_only:
+        Exporter(args).run_special_shaders_only()
+    else:
+        Exporter(args).run()
 
 
 if __name__ == "__main__":

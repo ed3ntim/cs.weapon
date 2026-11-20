@@ -305,3 +305,5 @@ def update_object(obj):
         if slot.material is not None and utils.PROP_SPEC in slot.material and slot.material not in done:
             done.add(slot.material)
             apply_seed(slot.material, obj.cs_weapon.seed, obj.cs_weapon.wear)
+    from . import special_shader
+    special_shader.sync(obj)

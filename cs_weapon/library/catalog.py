@@ -42,7 +42,9 @@ catalog.json, version 2 (version 1 lacks the procedure fields)::
         "stattrak_knife": {...},
         "nametag": {..., "text": {"position": [0.04, 0.038],
                                   "color": [241, 241, 241], "font": "Arial Narrow"}}
-      }
+      },
+      "special_shaders": {"rain": {"droplets": "special_shaders/water_droplets.png"},
+                          "frost": {"frost": "special_shaders/frost.png"}}
     }
 
 Gloves are weapons of type ``gloves`` with a ``glove`` entry instead of
@@ -372,12 +374,14 @@ class Catalog:
         self.paint_kits = {}
         self.skins = {}
         self.modules = {}
+        self.special_shaders = {}  # effect -> {role: absolute path}, e.g. rain droplets
         self.report = Report()
         self._incomplete = {}
 
     def load(self, *dirs):
         """Load and merge libraries (empty or missing folders are skipped)."""
         self.weapons, self.paint_kits, self.skins, self.modules = {}, {}, {}, {}
+        self.special_shaders = {}
         self.report = Report()
         self._incomplete = {}
         for d in dirs:
@@ -421,6 +425,10 @@ class Catalog:
         for key, mod in (data.get("modules") or {}).items():
             if isinstance(mod, dict):
                 self.modules[key] = Module(key, mod, root)
+        for key, files in (data.get("special_shaders") or {}).items():
+            if isinstance(files, dict):
+                self.special_shaders.setdefault(key, {}).update(
+                    {k: os.path.join(root, v) for k, v in files.items() if isinstance(v, str) and v})
         for w in data.get("weapons", []):
             try:
                 weapon = Weapon(w, root)
