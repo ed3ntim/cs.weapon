@@ -117,6 +117,18 @@ class StickerTests(unittest.TestCase):
         self.assertTrue(slots[0]["deprecated"])
         self.assertEqual((slots[1]["offset"], slots[1]["scale"], slots[1]["rotation"]), ((0.21, -0.32), 6.4, 0.0))
 
+    def test_markup_anchor_slots(self):
+        # legacy M4A4: slots 5 and 6 are the moved 1 and 2, anchors of an
+        # inspect link's freely placed stickers, but no layers
+        var = C.Variant({"sticker_markup": [
+            {"slot": 1, "offset": [0.015, -0.399], "scale": 15.0, "deprecated": True},
+            {"slot": 4, "offset": [0.09, -0.37], "scale": 13.6},
+            {"slot": 5, "offset": [0.0146, -0.3986], "scale": 13.6}]}, "", False)
+        self.assertEqual([s["slot"] for s in var.sticker_slots()], [1, 4])
+        anchors = var.sticker_slots(anchors=True)
+        self.assertEqual([s["slot"] for s in anchors], [1, 4, 5])
+        self.assertEqual(anchors[2]["offset"], (0.0146, -0.3986))
+
     def test_library_kit_ids_and_filter(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "catalog.json"), "w", encoding="utf-8") as fh:

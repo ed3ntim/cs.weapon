@@ -188,7 +188,7 @@ class CSWEAPON_PG_sticker(bpy.types.PropertyGroup):
     slot: IntProperty(min=0, max=C.STICKER_SLOTS - 1)  # layer, one sticker each
     # preset position the offsets refer to (-1: the slot's own); freely
     # placed stickers of an inspect link can share one
-    anchor: IntProperty(default=-1, min=-1, max=C.STICKER_SLOTS - 1)
+    anchor: IntProperty(default=-1, min=-1, max=C.MARKUP_SLOTS - 1)
     data: StringProperty()
     wear: FloatProperty(name="Wear", default=0.0, min=0.0, max=1.0, subtype="FACTOR",
                         update=_on_sticker_value, description="Scrapes the sticker off (0 = new)")

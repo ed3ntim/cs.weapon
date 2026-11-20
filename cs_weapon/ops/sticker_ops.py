@@ -41,7 +41,7 @@ def slot_presets(obj):
     if skin is not None:
         var = skin.weapon.variant(uses_legacy(skin))
         return {s["slot"]: (s["offset"][0], s["offset"][1], s["scale"], s.get("rotation", 0.0))
-                for s in var.sticker_slots()}
+                for s in var.sticker_slots(anchors=True)}
     out = {}
     for item in obj.cs_weapon.stickers:
         preset = _stored(item.get(PROP_PRESET))

@@ -84,6 +84,7 @@ CATALOG_VERSION = 2
 VANILLA_ID = 0
 # Sticker slots of the weapon shader (g_tSticker0..4)
 STICKER_SLOTS = 5
+MARKUP_SLOTS = 16  # slot numbers a StickerMarkup or inspect link may use as anchor
 
 # items_game "style" numbers (F_PAINT_STYLE = style - 1), 0 = vanilla
 STYLES = {
@@ -145,8 +146,14 @@ class Variant:
         self.target = _texture_paths(data.get("target"), root)
         self.sticker_markup = list(data.get("sticker_markup") or [])
 
-    def sticker_slots(self):
+    def sticker_slots(self, anchors=False):
         """Sticker slots of this mesh: [{"slot", "offset": (x, y), "scale",
+        "rotation", "deprecated"}]. With ``anchors`` also the markup slots
+        from STICKER_SLOTS on: no layer of their own, but the preset a
+        freely placed sticker of an inspect link refers to (the legacy
+        M4A4 lists slots 5 and 6 at the moved positions of 1 and 2).
+
+        Each entry: "slot", "offset", "scale",
         "rotation", "deprecated"}]. rotation is the slot's own tilt in turns
         (the shader's g_flSticker<k>Rotation); the item's rotation adds to it. The game maps a sticker through the second UV map
         (TEXCOORD_1, v from the top): sticker uv = rotate((uv1 - 0.5 -
@@ -161,7 +168,8 @@ class Variant:
             out = []
             for m in self.sticker_markup:
                 slot, scale, off = int(m.get("slot", -1)), float(m.get("scale", 0.0)), m.get("offset") or ()
-                if 0 <= slot < STICKER_SLOTS and scale > 0.0 and len(off) >= 2:
+                limit = MARKUP_SLOTS if anchors else STICKER_SLOTS
+                if 0 <= slot < limit and scale > 0.0 and len(off) >= 2:
                     out.append({"slot": slot, "offset": (float(off[0]), float(off[1])), "scale": scale,
                                 "rotation": float(m.get("rotation", 0.0)),
                                 "deprecated": bool(m.get("deprecated"))})

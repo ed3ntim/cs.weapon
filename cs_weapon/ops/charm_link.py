@@ -31,15 +31,27 @@ def charm_addon_available():
     return True
 
 
-def keychain_matrix(obj):
-    """World matrix for the charm cursor (location at the attachment, -Y out
-    of the weapon's left side, Z up), or None without attachment."""
+def link_offset(keychain):
+    """Spot of an inspect-link charm in the model's Source space (inches),
+    or None for the default spot. The game stores where the player placed
+    the charm as absolute model coordinates (the M4A4 test link: x 33.4
+    at the front sight, the default spot sits at x 20.7)."""
+    off = tuple(float(keychain.get(k, 0.0) or 0.0) for k in ("offset_x", "offset_y", "offset_z"))
+    return off if any(abs(v) > 1e-6 for v in off) else None
+
+
+def keychain_matrix(obj, offset=None):
+    """World matrix for the charm cursor (location at the attachment, or at
+    ``offset`` in Source model space, -Y out of the weapon's left side, Z
+    up), or None without attachment."""
     skin = registry.get_catalog().get_skin(obj.get(utils.PROP_SKIN, "")) if obj is not None else None
     if skin is None:
         return None
     legacy = uses_legacy(skin)
     local = next((m for m in (modules.attachment_local(skin.weapon, name, legacy) for name in ATTACHMENTS)
                   if m is not None), None)
+    if offset is not None:
+        local = modules.SOURCE_TO_BLENDER @ Matrix.Translation(Vector(offset) * modules.INCH)
     if local is None:
         return None
     world = obj.matrix_world @ template_matrix(obj.data).inverted_safe() @ local
@@ -63,12 +75,12 @@ def _charm_module(name):
     return None
 
 
-def hang(context, weapon):
+def hang(context, weapon, offset=None):
     """Hang cs.charm's selected charm at the weapon's keychain attachment.
     Returns (charm object or None, error text)."""
     if not charm_addon_available():
         return None, "Charms need the cs.charm add-on"
-    matrix = keychain_matrix(weapon)
+    matrix = keychain_matrix(weapon, offset)
     if matrix is None:
         return None, "This weapon has no charm attachment"
     cursor = context.scene.cursor
@@ -130,7 +142,7 @@ def hang_from_link(context, weapon, keychain):
         else:
             note = f"charm without its sticker (kit {keychain['sticker']} not in the cs.charm sticker library)"
     try:
-        obj, error = hang(context, weapon)
+        obj, error = hang(context, weapon, link_offset(keychain))
     finally:
         state.sticker_id = picked
     if obj is None:

@@ -183,7 +183,8 @@ class CSWEAPON_PT_stickers(_Panel, bpy.types.Panel):
         layout.prop(obj.cs_weapon, "sticker_mode", expand=True)
         state = context.window_manager.cs_weapon
         picked = sticker_registry.selected_sticker(context) if sticker_registry.is_loaded() else None
-        for slot in sorted(set(presets) | {s.slot for s in obj.cs_weapon.stickers}):
+        layers = {s for s in presets if s < C.STICKER_SLOTS}  # higher markup slots are only anchors
+        for slot in sorted(layers | {s.slot for s in obj.cs_weapon.stickers}):
             item = sticker_ops.entry_for(obj, slot)
             box = layout.box()
             row = box.row(align=True)

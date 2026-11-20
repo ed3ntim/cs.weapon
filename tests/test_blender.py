@@ -477,6 +477,22 @@ class BlenderTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 bpy.ops.cs_weapon.add_charm()
 
+    def test_charm_spot_of_an_inspect_link(self):
+        from mathutils import Vector
+        from cs_weapon.ops import charm_link, modules
+        self.assertIsNone(charm_link.link_offset({"id": 29}))
+        self.assertIsNone(charm_link.link_offset({"id": 29, "offset_x": 0.0}))
+        off = charm_link.link_offset({"offset_x": 33.4, "offset_y": -0.05, "offset_z": 12.0})
+        self.assertEqual(off, (33.4, -0.05, 12.0))
+        obj = self._spawn("demo_rifle:90001")
+        # the link's spot counts even where the model has no attachment
+        m = charm_link.keychain_matrix(obj, off)
+        self.assertIsNotNone(m)
+        from cs_weapon.ops.spawn import template_matrix
+        want = (obj.matrix_world @ template_matrix(obj.data).inverted_safe()
+                @ (modules.SOURCE_TO_BLENDER @ (Vector(off) * modules.INCH)))
+        self.assertLess((m.translation - want).length, 1e-4)
+
     def test_sticker_gap_faces_show_only_stickers(self):
         import tempfile
         from cs_weapon.nodes import gap, sticker_layer
