@@ -121,6 +121,13 @@ class PatternAddressTests(unittest.TestCase):
         _ext, uv = paint.pattern_address(g, g.wrap((0.2, 1.25, 0.0)), "REPEAT", "MIRROR", size=(1024, 512))
         self.assertAlmostEqual(uv.const[1], 0.75, places=6)  # mirrored second tile
 
+    def test_case_hardening_ramp_clamps(self):
+        # the shader's ramp sampler clamps (AddressU/V 2); Glock AXIA reads
+        # it at V 1..2 and must stay on the blue edge rows
+        from cs_weapon.nodes import paint
+        self.assertEqual(paint.CLAMPED.get("g_tCaseHardeningColorRamp"), "EXTEND")
+        self.assertNotIn("g_tWear", paint.CLAMPED)
+
 
 class BlenderTests(unittest.TestCase):
     @classmethod

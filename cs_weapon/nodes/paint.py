@@ -66,6 +66,11 @@ DEFAULTS = {
 }
 GLITTER_NODE = "cs_glitter"  # Add Shader of the glitter sparkle
 ADDRESS = {0: "REPEAT", 1: "MIRROR", 2: "EXTEND", 3: "CLIP", 4: "MIRROR"}
+# Textures the paint shader reads through its clamp sampler (AddressU/V 2).
+# The case hardening ramp is sampled at V = pattern * influence + offset, up
+# to 2.0: wrapping lands in the middle of the ramp (Glock AXIA yellow
+# instead of blue).
+CLAMPED = {"g_tCaseHardeningColorRamp": "EXTEND"}
 
 _index_cache = {}
 
@@ -298,7 +303,7 @@ def build_nodes(mat, skin, legacy, progs=None):
             if img is None:
                 res = (g.wrap((0.0, 0.0, 0.0)), g.wrap(0.0), (0.0, 0.0))
             else:
-                ext = "REPEAT"
+                ext = CLAMPED.get(name, "REPEAT")
                 if name == "g_tPattern":
                     ext, uvvec = pattern_address(g, uvvec, *address, size=tuple(img.size))
                 rgb, alpha = g.texture(img, uvvec, extension=ext)
