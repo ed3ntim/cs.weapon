@@ -99,6 +99,25 @@ class GlitterTests(unittest.TestCase):
                 self.assertTrue(sink.inputs[name].is_linked, name)
 
 
+class StickerGlitterTests(unittest.TestCase):
+    def test_glitter_mask_is_inverted(self):
+        # csgo_weapon: glitter = 1 - glitter mask (flakes where the mask is dark).
+        from cs_weapon.nodes import sticker_groups as SG
+        tree = SG.ensure_group("GLITTER")
+        inp = next(n for n in tree.nodes if n.bl_idname == "NodeGroupInput")
+        users = [l.to_node for l in tree.links if l.from_node == inp and l.from_socket.name == "Glitter Mask"]
+        self.assertEqual([(n.bl_idname, n.operation) for n in users], [("ShaderNodeMath", "SUBTRACT")])
+
+    def test_holo_spectrum_v_from_the_top(self):
+        # csgo_weapon: spectrum at (G + N.V, B) in texture space, Blender v = 1 - B.
+        from cs_weapon.nodes import sticker_groups as SG
+        tree = SG.ensure_group("HOLO_COORDS")
+        self.assertFalse(any(n.bl_idname == "ShaderNodeTangent" for n in tree.nodes))
+        sep = next(n for n in tree.nodes if n.bl_idname == "ShaderNodeSeparateColor")
+        blue = [l.to_node for l in tree.links if l.from_node == sep and l.from_socket.name == "Blue"]
+        self.assertEqual([(n.bl_idname, n.operation) for n in blue], [("ShaderNodeMath", "SUBTRACT")])
+
+
 class PatternAddressTests(unittest.TestCase):
     def test_per_axis_address(self):
         from cs_weapon.nodes import paint

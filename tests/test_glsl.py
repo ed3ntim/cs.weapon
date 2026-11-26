@@ -239,6 +239,20 @@ class GLSLMatrixTests(unittest.TestCase):
 
 
 class GloveUniformTests(unittest.TestCase):
+    def test_composite_texcoord_wrapped(self):
+        # one hand of every glove model has u in -1..0; the game composites
+        # in texture space 0..1 (Sport Gloves | Occult lost its pattern)
+        from cs_weapon.nodes import glove
+        tree = bpy.data.node_groups.new("texcoord_test", "ShaderNodeTree")
+        g = Graph(tree)
+        for (u, v), want in (((-0.25, 0.3), (0.75, 0.7)), ((0.25, 0.3), (0.25, 0.7)),
+                             ((-0.994, 0.996), (0.006, 0.004))):
+            tc = glove.composite_texcoord(g, g.wrap(u), g.wrap(v))
+            for got, w in zip(tc, want):
+                self.assertTrue(got.is_const)
+                self.assertAlmostEqual(got.const, w, places=6)
+        bpy.data.node_groups.remove(tree)
+
     def test_vector_trimmed_to_shader_size(self):
         from cs_weapon.nodes import glove
         u = glove.uniforms({"g_vA": [0.1, 0.2, 0.0, 0.0], "g_vB": [1.0, 2.0, 3.0]},

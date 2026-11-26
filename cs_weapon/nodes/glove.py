@@ -461,6 +461,16 @@ def _image_size(path, srgb):
     return tuple(img.size) if img is not None else (0, 0)
 
 
+def composite_texcoord(g, u_raw, v_raw):
+    """Composite shader texture coordinate (source convention, v from the
+    top) of a mesh UV. The game runs the composite in texture space 0..1
+    and the mesh samples the result with wrapping; one hand of every glove
+    model has u in -1..0, so the UV is wrapped first. Unwrapped, that hand
+    got the pattern and grunge transforms shifted by whole UV units, e.g.
+    half a pattern tile on Sport Gloves | Occult (scale 3.5)."""
+    return [g.fract(u_raw), g.fract(1.0 - v_raw)]
+
+
 def build_nodes(mat, skin, attributes, progs=None):
     """Fill a glove material. Returns the spec."""
     progs = progs or programs(skin, attributes)
@@ -474,7 +484,7 @@ def build_nodes(mat, skin, attributes, progs=None):
     wear = g.value(WEAR, 0.1)
     uv = g.socket(g.node("ShaderNodeUVMap", 0).outputs[0], "v", 0)
     u_raw, v_raw, _ = g.sep(uv)
-    texcoord = [u_raw, 1.0 - v_raw]  # source convention, v from the top; not wrapped
+    texcoord = composite_texcoord(g, u_raw, v_raw)
     cache = {}
     results = []
     folder = os.path.dirname(skin.paint_kit.shaders)

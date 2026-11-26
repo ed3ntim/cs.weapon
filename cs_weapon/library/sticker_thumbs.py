@@ -24,7 +24,7 @@ from .. import utils
 from . import stickers as F
 
 SIZE = 256
-THUMB_VERSION = 2  # bump when the look changes, invalidates the cache
+THUMB_VERSION = 3  # bump when the look changes, invalidates the cache
 
 
 def cache_dir():
@@ -116,7 +116,7 @@ def compose(sticker, size=SIZE):
         if holo is not None:
             strength = holo[..., 0:1] * 0.75
             u = np.mod(holo[..., 1] + 0.35 * (x + y), 1.0)
-            v = holo[..., 2]
+            v = 1.0 - holo[..., 2]  # CS2: v = B from the top, Blender rows start at the bottom
             spec = _read(tex.get(F.ROLE_HOLOSPECTRUM), (256, 64))
             if spec is not None:
                 ui = np.clip((u * 255).astype(int), 0, 255)
@@ -137,7 +137,8 @@ def compose(sticker, size=SIZE):
 
     elif finish == "GLITTER":
         glit = _read(tex.get(F.ROLE_GLITTER), size, data=True)
-        g = glit[..., 0] if glit is not None else np.ones_like(alpha)
+        # CS2: glitter where the mask is dark (shader uses 1 - mask).
+        g = 1.0 - glit[..., 0] if glit is not None else np.ones_like(alpha)
         rng = np.random.default_rng(zlib.crc32(sticker.id.encode("utf-8")))
         spark = (rng.random(alpha.shape) > 0.97).astype(np.float32) * g
         rgb = np.clip(rgb + spark[..., None] * 0.7, 0.0, 1.0)

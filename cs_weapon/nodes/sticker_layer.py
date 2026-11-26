@@ -429,7 +429,8 @@ def _slot(tree, entry, uv, shader, origin, vec=None):
             wire(glit.outputs["Color"], "Glitter Mask")
         if ST.ROLE_FLAKES in present:
             tiling = node("ShaderNodeMapping", "FLAKE_TILING", -1300, y[0])
-            tiling.inputs["Scale"].default_value = (8.0, 8.0, 8.0)
+            # csgo_weapon: sticker UV x g_flGlitterScaleSticker0 (1) x 1.75
+            tiling.inputs["Scale"].default_value = (1.75, 1.75, 1.75)
             links.new(vec, tiling.inputs["Vector"])
             flakes = tex(ST.ROLE_FLAKES, tiling.outputs["Vector"], extension="REPEAT")
             if flakes is not None:
